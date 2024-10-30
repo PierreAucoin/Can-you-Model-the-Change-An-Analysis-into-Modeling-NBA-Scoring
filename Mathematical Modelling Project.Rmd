@@ -1,0 +1,297 @@
+---
+title: "Can you Model the Change? An Analysis into Modeling NBA Scoring
+By: Pierre Aucoin"
+Author: "Pierre Aucoin"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+date: "2024-04-9"
+
+
+---
+  Throughout the last few years, I have observed young players under 25 in the National Basketball Association (NBA) scoring an extreme amount of points in games. This scoring brought up an interesting question. Are current young NBA players scoring more than young players have in the past? Certainly, there is ample data to show that the number of points scored in NBA games has increased in recent years, but is that because of the young players scoring more, or is it because of the veterans (CleaningtheGlass)? When considering young players, there is another question that I have always been curious about: Does draft order really matter in their scoring productivity? Of course, I believe that in a perfect world, a player who gets drafted with the 1st pick should be the best player in the draft. However, this is not always the case. Throughout my lifetime, I have followed many top NBA draft picks that did not work out and performed poorly while also seeing many later picks that have outperformed players picked before them, being key pieces for championship-winning teams and getting enshrined into the Basketball Hall of Fame.  I could not find any studies that model this information, so I decided to try this myself. Is it possible to model how draft position and draft year affect a player’s scoring capabilities?
+
+# Hypothesis
+
+My hypothesis is that younger players today score more points than players from earlier years will be correct. As I have been following the NBA for a long time, I have seen more young players score 40,50 and even 60 points in a single NBA game, which would support my hypothesis. However, this does not necessarily mean the players must score more on average. Regarding the question regarding the NBA draft, we will end up with the following: As the pick number increases, the scoring prowess will decrease. This is because, through recent memory, I have seen more success with earlier picks than failures.
+
+# Models, Assumptions, and Expected Results
+
+  For this project, I will be looking at two different models. These models observe how the year a player was drafted affects their Points per Game in their fifth season, and how their draft position (1st, 2nd, etc.) affected their Points per Game in their fifth season. If my hypothesis is correct, then the slope of the model regarding the year drafted and points per game should be positive, as it means that as the year increases, players are scoring more in their 5th season in the NBA. On the other hand, if my hypothesis is correct regarding how draft position affects scoring, then the slope of the second model should be negative, as that would mean that as draft position increases, the scoring would decrease. To help create this model, I have found and used the data from the top 15 picks from the NBA drafts from 2000 to 2017 and their points per game in their fifth season playing. 
+
+  I chose the 5th season of playing as that is often considered the beginning of the prime of a player’s career. According to some analyses, players often peak around 27-31 years old (Salameh 1). Players must be at least 19 years old to be drafted, their peak would be around their seventh in the NBA (NBAPA 296). However, if I used seven seasons, this could have issues, as when looking at players' statistics, many of them have less than seven years of experience in the NBA. I had to find a middle ground where many players played in the NBA for a long time while also giving the players time to develop and adapt to the NBA. Therefore, I chose their fifth season. It also worked out well because, for many of the players whose statistics I observed, their fifth season was one of their best seasons from a scoring perspective. The reason I chose to focus only on the top 15 picks is these picks are the top half of the first round of the NBA draft. Therefore, in theory, these players are the most impactful and can help create a model that could be extended later. 
+  
+  Another assumption made is that there are no rule changes between seasons that affect the number of points scored. This assumption allows me to simplify the model as I do not have to worry about how outside forces affect scoring. This also allows me to use the fifth season a player played in the NBA, allowing me to ignore seasons where a player did not play at all due to a severe injury.
+
+  The reason I am using points per game as my stat of interest instead of just using points scored is that players may not play the same number of games in a season. For example, a player may miss four games due to an injury. Points per game allow me to look at the points without worrying that one player played more games than another.
+
+# Model Creation and Analysis
+
+  Firstly, I got all my data from an accurate basketball statistics website called Basketball Reference.com. The website had statistics for every season a player has played in the NBA. I went through all 270 players (15 players for 18 different years of the NBA draft) and put their points per game of their fifth active season in the NBA into a CSV so I could work with it in R. Here is a small sample of the data used.
+```{r setup, include=FALSE}
+#Loads in data
+data=read.csv("BasketballStats.csv")
+```
+
+```{r,echo=FALSE}
+#Shows the format of the data imported
+print(data[1:15,])
+```
+  After getting the data into R, I plotted the players’ points per game against both their draft year and the position they were picked in. 
+```{r,echo=FALSE,fig.cap = "Figure 1, Graph of Points per Game in 5th season against Pick",fig.align = "center", fig.width=16/2, fig.height=9/2}
+#Plots Points Per Game Against Pick.
+plot(data$Pick,data$PPG,
+    main = "Points Per Game Against Pick",
+    xlab = "Pick",
+    ylab = "Points Per Game")
+```
+  
+  Although there were too many data points crowded together to create an accurate model, we see that there is a general shape that as the draft year increases, the points per game also increase. As the position picked increases, there are more players that have very low points per game. I do notice that for the graph involving points per game against the draft position, there are many top picks that scored many points per game (top left corner) compared to top picks that did not score a lot (bottom left corner of a graph). The inverse of this can be seen on the right side of the graph, where lower-drafted players do not tend to score a lot compared to other picks.
+
+
+```{r,echo=FALSE,fig.cap = "Figure 2, Graph of Points per Game in 5th season against Draft Year",fig.align = "center", fig.width=16/2, fig.height=9/2}
+#Plots Points Per Game Against Draft Year.
+plot(data$Year,data$PPG,
+     main = "Points Per Game Against Draft Year",
+    xlab = "Draft Year",
+    ylab = "Points Per Game")
+```
+  
+  Something similar can be seen when plotting points per game against draft year. It seems that more recent players scored a lot in their fifth season (upper right corner in the graph) compared to those in earlier draft years (upper left corner of the graph).
+
+# Modelling Points Per Game Against Draft Year
+
+  Firstly, I decided to look at points per game against the year drafted to see whether players recently drafted are better scorers than players who came before them. What I decided to do was divide the data by pick and try to model each pick individually to see whether the model works for each pick (i.e. build a model for all the 1st overall picks, then do the same for the 2nd overall picks, etc.). If the model works for each of the different picks, then it would work for all the picks at once. By analyzing each of the graphs, I noticed the line of best fit must be linear so that y can be written in the form:  
+
+$$
+\begin{aligned}
+y=a+bx
+\end{aligned}
+$$  
+  Where y is the points per game for a player in their fifth season, b is the rate of change between years (the slope), x is the year the player was drafted, and a is the y-intercept. I used least square regression through R to verify that the models fit well and get the values of a and b for each set. Below are graph for 3 models for pick 1,5 and 11. I did calculate the values for a and b as well as the p-values for all of the picks. 
+```{r,echo=FALSE,fig.cap = "Figure 3,4,5, Graphs of Points per Game in 5th season against draft year for the 1st, 5th and 11th picks respectively",fig.align = "center", fig.width=16/2, fig.height=9/2}
+#For each pick, plot Points Per Game against year drafted and have line of best fit in the form y=a+bx. This also gets the p-value for each of the models.
+uniqueYear<-unique(data$Year)
+uniquePick<-unique(data$Pick)
+a=c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+b=a
+simpleA=a
+p=a
+for (i in 1:15){
+  subset=data$PPG[data$Pick==i]
+  lin<-lm(subset~uniqueYear)
+  constantCoefficent<-lin[1]$coefficients
+  a[i]=constantCoefficent[1]
+  b[i]=constantCoefficent[2]
+  #Gets a different a value by using the model y=b(x-1999)+a
+  adaptedYear<-uniqueYear-1999
+  revised<-lm(subset~adaptedYear)
+  revisedCoefficent<-revised[1]$coefficients
+  simpleA[i]<-revisedCoefficent[1]
+  #This section gets the p-value for the model
+  f<-summary(lin)$fstatistic
+  p[i]<-pf(f[1],f[2],f[3],lower.tail=F)
+  #Only plotted 3 examples that show the basics of the output to keep page length down.
+  if(i==1||i==5||i==11){
+    plot(uniqueYear,subset,main=paste0("Points Per Game for pick ", i, " in the NBA draft against their draft year"),
+    xlab="Draft Year",
+    ylab="Points Per Game")
+  lines(uniqueYear,constantCoefficent[1]+constantCoefficent[2]*uniqueYear)}
+  
+}
+```
+Here is a table of all of the YIntercepts(a), revisedYIntercepts(a'), slope(b) and p-values for each model:
+```{r,echo=FALSE}
+#Prints out the coefficents and p-value for each model.
+data.frame(DraftPick=uniquePick,YIntercept=a, revisedYIntercept=simpleA, Slope=b, PValue=p)
+```
+  For nearly all the picks, the model did not fit well as especially in the three example graphs, there were outliers. Something interesting was that some graphs (picks 1,4,5, and 8) all have negative slopes, meaning b<0, while all the other graphs had a positive slope (b>0). Also, the values for a initially did not make much sense. Some picks had negative values, while the others had very high positive numbers that would not make sense for a player. This is because when looking at this data set, the first x value we are looking at is 2000, meaning the large positive and negative values for a is at x=0, which would explain why they are so extreme. I tried to model it again, but this time in the form:
+$$
+\begin{aligned}
+y=a'+b(x-1999)
+\end{aligned}
+$$  
+
+  This form of the equation worked slightly better, as the b values made a lot more sense, and the value of b, as well as the p-value (which will be explained later in the paper), was the same between the two different equations. The changed value of a is the revisedYIntercept column in the table above.
+
+  The other reason I used linear least square regression through R is that it provides a p-value for every model. In summary, the p-value represents the probability that the linear model explains as much or more variance if the x and y values are unrelated (W3schools.com). The typical rule is that if the p-value is less than 0.05, there is a significant relationship between the x and y variables (W3schools.com). In this situation, with the different picks, only the model for the 11th overall pick had a p-value less than 0.05 (0.01949036). This means that for the 11th overall pick, it seems to be that as the years have gone on, young players are scoring more in their fifth season. However, for all the other models, the p-values were greater than 0.05, meaning I cannot conclude that there is a significant relationship between year drafted and scoring.
+
+  However, I was unsatisfied with that answer, so I tried another model with this relationship. Instead of doing it one pick at a time, I decided to take the average points per game for each of the top 15 in each draft and use that as my y-value. Here is the graph and the table of values for the equation.
+```{r,echo=FALSE,fig.cap = "Figure 6, Graph of Average Points Per Game against Draft Year",fig.align = "center", fig.width=16/2, fig.height=9/2}
+#Calculate the average points per game in the fifth season for each year's top 15 picks.
+YearAvg<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+for (i in 1:18){
+  subset=data$PPG[data$Year==(1999+i)]
+  YearAvg[i]<-mean(subset)
+}
+#Do the same thing as the code above to get the line of best fit in the form y=a+bx
+lin<-lm(YearAvg~uniqueYear)
+constantCoefficent<-lin[1]$coefficients  
+a=constantCoefficent[1]
+b=constantCoefficent[2]
+adaptedYear<-uniqueYear-1999
+revised<-lm(YearAvg~adaptedYear)
+revisedCoefficent<-revised[1]$coefficients
+simpleA<-revisedCoefficent[1]
+f<-summary(lin)$fstatistic
+p<-pf(f[1],f[2],f[3],lower.tail=F)
+plot(uniqueYear,YearAvg,main=paste0("Average Points Per Game vs Draft Year"),
+xlab="Draft Year",
+ylab="Average Points Per Game")
+lines(uniqueYear,constantCoefficent[1]+constantCoefficent[2]*uniqueYear)
+data.frame(YIntercept=a, revisedYIntercept=simpleA, Slope=b, PValue=p)
+```
+   The graph created from this idea looked significantly better than the other models. Thankfully, this model had a p-value less than 0.05 (0.003089872). Because of this, I can conclude that there is a significant relationship between the year of a draft and the average points per game of the top 15 players in their fifth season in the NBA.
+
+```{r,echo=FALSE}
+least_square <- function(term,uniquePick) { # create gets the values a and and b for a least square fit in the form of y=ae^(bx)
+  #Note: In R, log is ln.
+  work<-term
+  Ci<-log(work+1)
+  sumC<-sum(Ci)
+  CT<-sum(Ci*uniquePick)
+  C<-(CT*sum(uniquePick)-sumC*sum(uniquePick^2))/(sum(uniquePick)^2-length(work)*sum(uniquePick^2))
+  A<-exp(C)
+  B<-(sumC-length(work)*C)/(sum(uniquePick))
+  return(c(A,B))
+}
+```
+# Modelling Points Per Game Against Draft Position
+  
+  Next, I worked to see if it was true that top picks score more per game than later picks. Similar to the previous set of models, I started by separating the data and seeing if the model fit for each individual draft year. This time, instead of a linear model, I found that the points scored followed an exponential model described by:
+
+$$
+\begin{aligned}
+y=ae^{bx}
+\end{aligned}
+$$  
+
+  Where Y is the points per game, a is the y-intercept, x is the position the player was drafted, and b is the exponential rate of change. As d approaches 0, the line created by this equation becomes more and more linear. This was certainly seen throughout the 18 different models. To get the values of a and b, I created a method that used the least-square method taught in this class. However, it should be noted that when working on these values, some scored 0 points per game, and as ln(0) equals infinity, I used ln(y+1) to ensure the model functioned correctly. Below are three example graphs from the 2000, 2007 and 2011 NBA drafts. I did get the values for a and b of all of the draft years.
+```{r,echo=FALSE,fig.cap = "Figure 7,8,9, Graphs of Points Per Game against Draft Position for the 2000, 2007 and 2011 NBA Drafts respectively",fig.align = "center", fig.width=16/2, fig.height=9/2}
+a<-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+b<-a
+pValue<-a
+#For each year, get the values a and b for the least-square of the picks for year i in the form y=ae^(bx)
+for (i in 2000:2017){
+  subset=data$PPG[data$Year==i]
+  Values<-least_square(subset,uniquePick)
+  a[i-1999]=Values[1]
+  b[i-1999]=Values[2]
+  #Same thing as earlier in regards to only plotting 3 examples.
+  if(i==2000||i==2007||i==2011){
+    plot(uniquePick,subset,
+      main = paste0("Points per game for ", i, " NBA Draft against draft pick"),
+      xlab = paste0("Pick in ",i, " NBA draft"),
+      ylab = "Points Per Game")
+    lines(uniquePick,Values[1]*exp(Values[2]*uniquePick))
+  }
+}
+```
+Below is a table of all of the vlaues of a and b for each year.
+```{r,echo=FALSE}
+data.frame(DraftYear=uniqueYear,a=a, b=b)
+```
+  Some of them, such as the 2000 NBA Draft, look like a traditional exponential model where b<0. Others, such as the 2007 model, have a line that looks very linear, as the b value is less than 0 but is very close to 0. Finally, we have years such as 2011, where the model looks linearly positive, meaning that the b-value is greater than 0, but still very close to 0. I also noticed that compared to the models whose lines of best fit looked more linear, the years that looked more exponential seemed to fit the data better. Unfortunately, I could not find how to directly determine whether there is a relationship between draft position and scoring, meaning there is not a clear-cut way to determine whether the model works in this form.
+  
+However, I can convert this model to a linear equation. By taking the logarithm of both sides of the equation, I get:
+
+$$
+\begin{aligned}
+ln(y)=ln(a)+bx
+\end{aligned}
+$$  
+
+In this equation, ln(a) is the y-intercept and b is the slope. Below are the linear versions of the three models created earlier. Similar to previous methods, I did get all of the vlaues for all of the other draft years.
+```{r,echo=FALSE,fig.cap = "Figure 10,11,12, Graphs of the logarithm of Points Per Game against Draft Position for the 2000, 2007 and 2011 NBA Drafts respectively",fig.align = "center", fig.width=16/2, fig.height=9/2}
+loga<-a
+newB<-b
+for (i in 2000:2017){
+  subset=data$PPG[data$Year==i]
+  ln=log(subset+1)
+  #Did the same thing as the linear model, except instead of relating y~x, it is now ln(y+1)~x
+  lnTerm<-lm(ln~uniquePick)
+  constantCoefficent<-lnTerm[1]$coefficients
+  loga[i-1999]=constantCoefficent[1]
+  newB[i-1999]=constantCoefficent[2]
+  #This section gets the p-value for the model
+  f<-summary(lnTerm)$fstatistic
+  pValue[i-1999]<-pf(f[1],f[2],f[3],lower.tail=F)
+  if(i==2000||i==2007||i==2011){
+    plot(uniquePick,ln,
+      main = paste0("Ln of points per game for ", i, " NBA Draft against draft pick"),
+      xlab = paste0("Pick in ",i, " NBA draft"),
+      ylab = "Logarithm of Points Per Game")
+    lines(uniquePick,log(a[i-1999])+b[i-1999]*uniquePick)
+  }
+}
+```
+Below is a table of ln(a), b and the p-values for each draft year and also verifying that ln(a) found in the linear model is equal to ln of the a value found in the exponential model and that the two b values match.
+```{r,echo=FALSE}
+#Had to round to show they are equal just because the two terms rounded off at different places naturally.
+data.frame(DraftYear=uniqueYear,lna=loga,  lnofaIslna=round(log(a),10)==round(loga,10), b=b, bvaluesMatch=round(b,10)==round(newB,10),  pValue=pValue)
+```
+
+Using the linear modelling method in R, I used earlier; I confirmed that my previous calculations for a and b worked as values of b matched while the intercept is ln(a) by modelling the line of best fit between x and ln(y). This also provided p-values I could use to determine whether there is a relationship between the points per game and draft position. Some of these graphs did seem to have outliers that were far away from the line, so I was doubtful that this model would be effective for every year.
+  
+Observing the table of all the p-values, one can see that there were only four years where the p-values were less than 0.05. These years were 2000, 2003, 2005 and 2012. Because all these years had negative slopes, I could conclude for those years that as draft position increased, points per game in a player’s fifth season decreased. However, I could not conclude something similar for any of the other years, as all of them had a p-value greater than 0.05, meaning that for these years, there is not a significant relationship between draft position and points per game.
+
+```{r,echo=FALSE,fig.cap = "Figure 13,14, Graphs of Average Points Per Game against Draft Position, the logarithm of Average Points Per Game against Draft Position and a table providing the values of both models",fig.align = "center", fig.width=16/2, fig.height=9/2}
+PickAvg=c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
+#Got the average points per game for a player's fifth season for each pick and used that as my y values.
+for (i in 1:15){
+  subset=data$PPG[data$Pick==i]
+  PickAvg[i]=mean(subset)
+}
+#Did the same thing with this data as I did earlier to get the exponential and linear version of the model.
+Values<-least_square(PickAvg,uniquePick)  
+plot(uniquePick,PickAvg,
+main="Average Points Per Game for each Pick against Pick",
+ylab="Average Points Per Game",
+xlab="Pick")
+lines(uniquePick,Values[1]*exp(Values[2]*uniquePick))
+ln=lm(log(PickAvg+1)~uniquePick)
+f<-summary(ln)$fstatistic
+pValue<-pf(f[1],f[2],f[3],lower.tail=F)
+lnTerm=log(PickAvg+1)
+plot(uniquePick,lnTerm,
+main="Ln of Average Points Per Game for each Pick against Pick",
+ylab="Logarithm Average Points Per Game",
+xlab="Pick")
+lines(uniquePick,log(Values[1])+(Values[2]*uniquePick))
+
+data.frame(a=Values[1],loga=log(Values[1]),b=Values[2], pValue=pValue)
+```
+Finally, just like the previous model, I decided to try to model it using the averages of each pick as the y-values. The exponential graph looked similar to the years with a p-value less than 0.05. When looking at the linear graph of x and ln(y), we see that the line fits almost perfectly, which is reflected in the p-value (0.0004766719). Because the slope is negative, I can conclude that as draft position increases, the average points per game decreases.
+
+
+# Conclusion
+	
+Based on the results, it seems that my hypothesis is correct. Players drafted at a higher position tend to score more than players drafted later, and young players score more than those who came before them. However, it does not look like the models work on a year-by-year or a pick-by-pick basis, as many of the p-values for individual models were greater than 0.05, meaning there was no significant relationship between points scored and draft year/ draft pick. This makes some sense, as it seems that there is still a bit of luck when it comes to drafting players to play in the NBA. Every year ends up slightly different, but by averaging scoring, it cancels out extreme outliers.
+
+# Possible Improvements
+
+Regarding possible improvements, one could be to expand the timeframe of the data used. I would be very interested to see if the model still holds true when using players from the 1980’s and 1990’s. Another possible improvement could be calculating their points per 48 minutes of play (which is the total points scored divided by minutes played and then multiplied by 48, which is the length of an NBA game) (BasketballReference.com). Using this statistic would remove the assumption that players would have played the same number of minutes per game, as the scoring statistics would have taken that into account. Another possible improvement would be to add an additional variable for rule changes. There have been slight rule changes throughout the history of the NBA. Some of these rule changes could have influenced scoring, and I believe they should be accounted for when creating another model. (Zsolt) Finally, I would like to investigate whether these models work for other important basketball statistics, such as rebounds or assists. Even though the winning team is the one who scores more points than their opponent, assists and rebounds are very important aspects of the game of basketball, and I would be very interested to see if similar models to what I created in this project could work for these statistics as well.
+
+# Bibliography
+
+“Data Science- Regression Table: P-Value”. W3schools.com. 2024.                                                                   https://www.w3schools.com/datascience/ds_linear_regression_pvalue.asp
+
+“Four Factors”, Cleaning The Glass.                            https://cleaningtheglass.com/stats/league/fourfactors?season=2023&seasontype=regseason&start=10/1/2023&end=10/15/2024 
+
+“Glossary”. BasketballReference.com. https://www.basketball-reference.com/draft/ 
+
+NBAPA, “COLLECTIVE BARGAINING AGREEMENT”, July 2023, https://nbpa.com/cba 
+
+Salameh, Tony. “An Empirical Analysis of Prime Performing Age of NBA Players; When Do They Reach Their Prime?”. Bryant Univeristy. https://digitalcommons.bryant.edu/cgi/viewcontent.cgi?article=1223&context=eeb#:
+
+Zsolt, Hartyàni. “History of Basketball”, Basketref.com.                                  https://www.basketref.com/en/index.php/rules/rules-history 
+
+
+# Data
+
+“NBA Draft Index”. BasketballReference.com. https://www.basketball-reference.com/draft/ 
+
+Note about the data: The link I used is a hub that allows me to get access to every single draft class. Then, I went to each individual draft and got the points per game from each of the player’s fifth seasons.
+
+Note about coding: All of the code was created by me using techniques learned in other classes.
